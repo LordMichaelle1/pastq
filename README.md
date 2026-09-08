@@ -1,56 +1,106 @@
-# Welcome to your Expo app 👋
+# PastQ
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Photograph a past question paper, get drillable questions, revise them on a
+schedule that puts the ones you keep forgetting in front of you more often.
 
-## Get started
+Built for [RevenueCat Shipaton 2026](https://www.shipaton.com) (Next Gen).
 
-1. Install dependencies
+| Scan a paper | What's due | Drill |
+| --- | --- | --- |
+| ![Questions pulled off a photographed paper](docs/scan.png) | ![Subjects and what is due](docs/study.png) | ![A question, revealed, with the four grades](docs/drill.png) |
 
-   ```bash
-   npm install
-   ```
+## Why past questions
 
-2. Start the app
+Nigerian students don't say "past papers", they say **past questions**. It's
+the phrase they search for, the thing they buy photocopied outside the gate,
+and the thing they revise from — because examiners reuse them.
 
-   ```bash
-   npx expo start
-   ```
+The problem isn't finding past questions. It's that revising from a stack of
+photocopies means reading the same page over and over, remembering the ones
+you already know, and running out of time before you reach the ones you don't.
 
-In the output, you'll find options to open the app in a
+PastQ turns the paper into cards and decides what you see next.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## What it does
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+1. **Scan.** Photograph a paper. On-device text recognition reads it — Apple
+   Vision on iOS, Google ML Kit on Android. Nothing leaves the phone.
+2. **Parse.** Numbered questions get pulled out; the university header, the
+   instructions, the marks and "Page 1 of 2" get thrown away. Sub-parts stay
+   attached to their parent, because "Trace the steps of a bubble sort on A"
+   means nothing without the array it refers to.
+3. **Review.** You see what it found as editable text before anything saves.
+   OCR is confident and wrong often enough that this step isn't optional.
+4. **Drill.** Reveal, then grade yourself Again, Hard, Good or Easy. What you
+   miss comes back in the same session. What you know comes back in days,
+   then weeks.
 
-## Get a fresh project
+Free accounts keep one subject. Paying unlocks as many as you're actually
+sitting.
 
-When you're ready, run:
+## How the scheduling works
+
+Derived from SM-2, cut down to four grades. Every card carries an interval, an
+ease factor, and a count of reps and lapses.
+
+| Grade | What happens |
+| --- | --- |
+| Again | Interval resets to zero, ease drops, a lapse is recorded. The card returns before the session ends. |
+| Hard | Advances, but more slowly than Good, and ease drops slightly. |
+| Good | Advances on the card's own ease. First correct answer is one day, then three, then ease-multiplied. |
+| Easy | Same, with ease rising. |
+
+Ease never falls below 1.3, and intervals cap at a year, so a card can't get
+stuck unreachable or come back so often it becomes noise.
+
+The scheduling is pure functions in [`src/lib/srs.ts`](src/lib/srs.ts) with no
+database and no device behind them, so it's tested directly:
 
 ```bash
-npm run reset-project
+npm test
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Running it
 
-### Other setup steps
+You need Node 20+, Xcode (iOS) or Android Studio, and a development build —
+the OCR and purchase modules are native, so Expo Go won't run this.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+npm install
+npx expo run:ios      # or: npx expo run:android
+```
 
-## Learn more
+To make purchases work, copy `.env.example` to `.env` and fill in your
+RevenueCat public SDK keys. Without them the app runs normally and the paywall
+says purchases aren't set up, rather than crashing.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Layout
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```
+src/lib/srs.ts           scheduling, pure, tested
+src/lib/parse-paper.ts   OCR lines -> questions, pure, tested
+src/lib/ocr.ts           text recognition, wrapped so failures are legible
+src/lib/db.ts            schema and versioned migrations
+src/lib/queries.ts       subjects, questions, the due queue
+src/lib/entitlements.ts  RevenueCat, failing closed to the free tier
+src/app/                 screens (expo-router)
+scripts/make-icons.py    regenerates the icon set
+```
 
-## Join the community
+## A few decisions worth explaining
 
-Join our community of developers creating universal apps.
+**A question can't exist without a place in the queue.** `createQuestion`
+writes the question and its review row in one transaction. There's no path
+where a saved question is invisible to the drill.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+**Entitlements fail closed.** If RevenueCat can't be reached, the app treats
+you as a free user. Failing open would mean the paywall stops meaning anything
+the first time the network drops.
+
+**The core is pure.** Scheduling and parsing are the two places a bug would be
+silent — a bad interval doesn't crash, it just teaches you badly. Both are
+ordinary functions with tests, separate from anything native.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
