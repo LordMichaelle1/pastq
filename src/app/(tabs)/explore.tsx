@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
 import {
@@ -20,6 +20,7 @@ import { countQuestions, createQuestion, listSubjects, type Subject } from '@/li
 
 export default function AddScreen() {
   const db = useSQLiteContext();
+  const router = useRouter();
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
 
@@ -142,6 +143,15 @@ export default function AddScreen() {
               <ThemedText type="smallBold">Save question</ThemedText>
             </Pressable>
 
+            <Pressable
+              onPress={() =>
+                router.push({ pathname: '/scan', params: { subjectId: String(activeId) } })
+              }
+              disabled={activeId === null}
+              style={styles.scanLink}>
+              <ThemedText type="link">Scan a paper instead</ThemedText>
+            </Pressable>
+
             {count > 0 ? (
               <ThemedText type="small" style={{ color: colors.textSecondary }}>
                 {count} saved in this subject
@@ -170,4 +180,5 @@ const styles = StyleSheet.create({
   promptInput: { minHeight: 110 },
   answerInput: { minHeight: 80 },
   save: { alignItems: 'center', paddingVertical: Spacing.three, borderRadius: Spacing.three },
+  scanLink: { alignItems: 'center', paddingVertical: Spacing.two },
 });

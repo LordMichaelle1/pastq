@@ -29,6 +29,7 @@ export default function RootLayout() {
               to be a real word rather than the route group name. */}
           <Stack.Screen name="(tabs)" options={{ headerShown: false, title: 'Study' }} />
           <Stack.Screen name="drill/[subjectId]" options={{ title: 'Drill' }} />
+          <Stack.Screen name="scan" options={{ title: 'Scan a paper' }} />
           <Stack.Screen name="paywall" options={{ presentation: 'modal', title: '' }} />
         </Stack>
       </ThemeProvider>

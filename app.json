@@ -34,7 +34,19 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "pastq needs your photo library so you can pick a photo of a past paper."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "pastq uses the camera to photograph past papers."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
